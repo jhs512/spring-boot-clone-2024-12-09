@@ -5,6 +5,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class ApplicationContextTest {
@@ -28,5 +30,13 @@ public class ApplicationContextTest {
         Class<TestPostService> cls = applicationContext.findComponentClassBy(TestPostService.class);
 
         assertThat(cls).isNotNull();
+    }
+
+    @Test
+    @DisplayName("applicationContext.getBeanDefinitionBy(\"testPostService\");")
+    public void t3() {
+        Optional<BeanDefinition> opBeanDefinition = applicationContext.findBeanDefinitionBy("testPostService");
+
+        assertThat(opBeanDefinition).isPresent();
     }
 }
