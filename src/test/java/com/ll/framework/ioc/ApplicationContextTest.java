@@ -33,9 +33,9 @@ public class ApplicationContextTest {
     }
 
     @Test
-    @DisplayName("applicationContext.getBeanDefinitionBy(\"testPostService\");")
+    @DisplayName("applicationContext.findBeanDefinition(\"testPostService\");")
     public void t3() {
-        Optional<BeanDefinition> opBeanDefinition = applicationContext.findBeanDefinitionBy("testPostService");
+        Optional<BeanDefinition> opBeanDefinition = applicationContext.findBeanDefinition("testPostService");
 
         assertThat(opBeanDefinition).isPresent();
     }
