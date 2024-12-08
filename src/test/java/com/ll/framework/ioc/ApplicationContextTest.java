@@ -1,5 +1,6 @@
 package com.ll.framework.ioc;
 
+import com.ll.framework.ioc.testDomain.post.service.TestPostService.TestPostService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ public class ApplicationContextTest {
     @BeforeAll
     public static void beforeAll() {
         applicationContext = new ApplicationContext("com.ll");
+        applicationContext.init();
     }
 
     @Test
@@ -21,9 +23,9 @@ public class ApplicationContextTest {
     }
 
     @Test
-    @DisplayName("applicationContext.findComponentBy(TestPostService.class);")
+    @DisplayName("applicationContext.findComponentClassBy(TestPostService.class);")
     public void t2() {
-        Class<TestPostService> cls = applicationContext.findComponentBy(TestPostService.class);
+        Class<TestPostService> cls = applicationContext.findComponentClassBy(TestPostService.class);
 
         assertThat(cls).isNotNull();
     }
