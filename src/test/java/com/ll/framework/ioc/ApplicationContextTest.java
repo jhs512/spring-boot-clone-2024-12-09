@@ -47,4 +47,12 @@ public class ApplicationContextTest {
 
         assertThat(opBeanDefinition).isPresent();
     }
+
+    @Test
+    @DisplayName("applicationContext.genBean(\"testSmsSenderService\");")
+    public void t5() {
+        TestSmsSenderService testSmsSenderService = applicationContext.genBean("testSmsSenderService");
+
+        assertThat(testSmsSenderService).isPresent();
+    }
 }
