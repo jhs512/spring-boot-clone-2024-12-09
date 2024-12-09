@@ -5,11 +5,11 @@ import com.ll.framework.ioc.annotations.Bean;
 import com.ll.framework.ioc.annotations.Configuration;
 
 @Configuration
-public class BaseInitData {
+public class TestBaseInitData {
     @Bean
-    public ApplicationRunner baseInitDataApplicationRunner() {
+    public ApplicationRunner testBaseInitDataApplicationRunner() {
         return args -> {
-            System.out.println("BaseInitData");
+
         };
     }
 }

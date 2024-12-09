@@ -6,6 +6,7 @@ import com.ll.framework.ioc.annotations.Configuration;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -14,6 +15,7 @@ public class ApplicationContext {
     private final String basePackage;
     private Reflections reflections;
     private Map<String, BeanDefinition> beanDefinitions;
+    private Map<String, Object> beans;
 
     public ApplicationContext(String basePackage) {
         this.basePackage = basePackage;
@@ -22,6 +24,7 @@ public class ApplicationContext {
     public void init() {
         reflections = new Reflections(basePackage, Scanners.TypesAnnotated);
         beanDefinitions = collectBeanDefinitions();
+        beans = new HashMap<>();
     }
 
     private Map<String, BeanDefinition> collectBeanDefinitions() {
@@ -29,40 +32,20 @@ public class ApplicationContext {
 
         findComponentClasses()
                 .forEach(cls -> {
-                    String beanName = getBeanName(cls);
+                    String beanName = BeanDefinition.getBeanName(cls);
                     beanDefinitions.put(beanName, new BeanDefinition(cls));
                 });
 
         findBeanMethods()
                 .forEach((factoryMethod) -> {
-                    String beanName = getBeanName(factoryMethod);
+                    String beanName = BeanDefinition.getBeanName(factoryMethod);
                     beanDefinitions.put(beanName, new BeanDefinition(factoryMethod));
                 });
 
         return beanDefinitions;
     }
 
-    private String getBeanName(Class<?> cls) {
-        String beanName = cls.getSimpleName();
-        beanName = beanName.substring(0, 1).toLowerCase() + beanName.substring(1);
-
-        return beanName;
-    }
-
-    private String getBeanName(Method factoryMethod) {
-        return factoryMethod.getName();
-    }
-
-    <T> Class<T> findComponentClassBy(Class<T> cls) {
-        return findComponentClasses()
-                .stream()
-                .filter(cls::isAssignableFrom)
-                .map(c -> (Class<T>) c)
-                .findFirst()
-                .orElse(null);
-    }
-
-    private Set<Class<?>> findComponentClasses() {
+    Set<Class<?>> findComponentClasses() {
         return reflections
                 .getTypesAnnotatedWith(Component.class)
                 .stream()
@@ -70,7 +53,7 @@ public class ApplicationContext {
                 .collect(Collectors.toSet());
     }
 
-    private Set<Method> findBeanMethods() {
+    Set<Method> findBeanMethods() {
         return reflections
                 .getTypesAnnotatedWith(Configuration.class)
                 .stream()
@@ -86,5 +69,60 @@ public class ApplicationContext {
         if (beanDefinition == null) return Optional.empty();
 
         return Optional.of(beanDefinition);
+    }
+
+    public <T> T genBean(String beanName) {
+        if (beans.containsKey(beanName)) {
+            return (T) beans.get(beanName);
+        }
+
+        Optional<BeanDefinition> opBeanDefinition = findBeanDefinition(beanName);
+
+        BeanDefinition beanDefinition = opBeanDefinition.orElseThrow(() -> new IllegalArgumentException("Bean not found: " + beanName));
+
+        T bean = createBean(beanDefinition);
+
+        beans.put(beanName, bean);
+
+        return bean;
+    }
+
+    private <T> T createBean(BeanDefinition beanDefinition) {
+        Object[] dependencyBeans = beanDefinition
+                .getDependencyBeans()
+                .stream()
+                .map(this::genBean)
+                .toArray();
+
+        if (beanDefinition.hasCustomFactoryMethod()) {
+            return createBeanByFactoryMethod(beanDefinition, dependencyBeans);
+        } else {
+            return createBeanByConstructor(beanDefinition, dependencyBeans);
+        }
+    }
+
+    private <T> T createBeanByConstructor(BeanDefinition beanDefinition, Object[] dependencyBeans) {
+        try {
+            T bean = (T) beanDefinition.getCls().getConstructors()[0].newInstance(dependencyBeans);
+
+            return bean;
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private <T> T createBeanByFactoryMethod(BeanDefinition beanDefinition, Object[] dependencyBeans) {
+        Method method = beanDefinition.getFactoryMethod();
+
+        try {
+            Object bean = method.invoke(
+                    genBean(beanDefinition.getConfigurationBeanName()),
+                    dependencyBeans
+            );
+
+            return (T) bean;
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
