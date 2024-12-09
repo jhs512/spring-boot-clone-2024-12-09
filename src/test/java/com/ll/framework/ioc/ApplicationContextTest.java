@@ -39,4 +39,12 @@ public class ApplicationContextTest {
 
         assertThat(opBeanDefinition).isPresent();
     }
+
+    @Test
+    @DisplayName("applicationContext.findBeanDefinition(\"baseInitDataApplicationRunner\");")
+    public void t4() {
+        Optional<BeanDefinition> opBeanDefinition = applicationContext.findBeanDefinition("baseInitDataApplicationRunner");
+
+        assertThat(opBeanDefinition).isPresent();
+    }
 }
