@@ -1,13 +1,13 @@
 package com.ll.framework.ioc;
 
+import com.ll.framework.ioc.annotations.Bean;
 import com.ll.framework.ioc.annotations.Component;
+import com.ll.framework.ioc.annotations.Configuration;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.lang.reflect.Method;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class ApplicationContext {
@@ -21,12 +21,25 @@ public class ApplicationContext {
 
     public void init() {
         reflections = new Reflections(basePackage, Scanners.TypesAnnotated);
-        beanDefinitions = findComponentClasses()
-                .stream()
-                .collect(HashMap::new, (map, cls) -> {
+        beanDefinitions = collectBeanDefinitions();
+    }
+
+    private Map<String, BeanDefinition> collectBeanDefinitions() {
+        Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
+
+        findComponentClasses()
+                .forEach(cls -> {
                     String beanName = getBeanName(cls);
-                    map.put(beanName, new BeanDefinition(cls));
-                }, HashMap::putAll);
+                    beanDefinitions.put(beanName, new BeanDefinition(cls));
+                });
+
+        findBeanMethods()
+                .forEach((factoryMethod) -> {
+                    String beanName = getBeanName(factoryMethod);
+                    beanDefinitions.put(beanName, new BeanDefinition(factoryMethod));
+                });
+
+        return beanDefinitions;
     }
 
     private String getBeanName(Class<?> cls) {
@@ -34,6 +47,10 @@ public class ApplicationContext {
         beanName = beanName.substring(0, 1).toLowerCase() + beanName.substring(1);
 
         return beanName;
+    }
+
+    private String getBeanName(Method factoryMethod) {
+        return factoryMethod.getName();
     }
 
     <T> Class<T> findComponentClassBy(Class<T> cls) {
@@ -50,6 +67,16 @@ public class ApplicationContext {
                 .getTypesAnnotatedWith(Component.class)
                 .stream()
                 .filter(cls -> !cls.isInterface())
+                .collect(Collectors.toSet());
+    }
+
+    private Set<Method> findBeanMethods() {
+        return reflections
+                .getTypesAnnotatedWith(Configuration.class)
+                .stream()
+                .filter(cls -> !cls.isInterface())
+                .flatMap(cls -> Arrays.stream(cls.getDeclaredMethods()))
+                .filter(method -> method.isAnnotationPresent(Bean.class))
                 .collect(Collectors.toSet());
     }
 
