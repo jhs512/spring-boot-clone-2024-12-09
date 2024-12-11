@@ -32,7 +32,7 @@ public class BeanDefinition {
         this.factoryMethod = factoryMethod;
     }
 
-    public List<String> getDependencyBeans() {
+    public List<String> getDependencyBeanNames() {
         return Arrays
                 .stream(
                         hasCustomFactoryMethod() ? factoryMethod.getParameters() : cls.getConstructors()[0].getParameters()

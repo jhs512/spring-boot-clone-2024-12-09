@@ -1,4 +1,4 @@
-package com.ll.framework.ioc.testDomain.post.repository;
+package com.ll.testDomain.post.repository;
 
 import com.ll.framework.ioc.annotations.Repository;
 

@@ -6,12 +6,14 @@ import com.ll.framework.ioc.annotations.Configuration;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class ApplicationContext {
+
     private final String basePackage;
     private Reflections reflections;
     private Map<String, BeanDefinition> beanDefinitions;
@@ -22,7 +24,12 @@ public class ApplicationContext {
     }
 
     public void init() {
-        reflections = new Reflections(basePackage, Scanners.TypesAnnotated);
+        reflections = new Reflections(
+                basePackage,
+                Scanners.TypesAnnotated,
+                Scanners.MethodsAnnotated,
+                Scanners.SubTypes
+        );
         beanDefinitions = collectBeanDefinitions();
         beans = new HashMap<>();
     }
@@ -45,12 +52,16 @@ public class ApplicationContext {
         return beanDefinitions;
     }
 
-    Set<Class<?>> findComponentClasses() {
+    public Set<Class<?>> findComponentClassesBy(Class<? extends Annotation> annotation) {
         return reflections
-                .getTypesAnnotatedWith(Component.class)
+                .getTypesAnnotatedWith(annotation)
                 .stream()
                 .filter(cls -> !cls.isInterface())
                 .collect(Collectors.toSet());
+    }
+
+    Set<Class<?>> findComponentClasses() {
+        return findComponentClassesBy(Component.class);
     }
 
     Set<Method> findBeanMethods() {
@@ -66,7 +77,9 @@ public class ApplicationContext {
     public Optional<BeanDefinition> findBeanDefinition(String beanName) {
         BeanDefinition beanDefinition = beanDefinitions.get(beanName);
 
-        if (beanDefinition == null) return Optional.empty();
+        if (beanDefinition == null) {
+            return Optional.empty();
+        }
 
         return Optional.of(beanDefinition);
     }
@@ -89,7 +102,7 @@ public class ApplicationContext {
 
     private <T> T createBean(BeanDefinition beanDefinition) {
         Object[] dependencyBeans = beanDefinition
-                .getDependencyBeans()
+                .getDependencyBeanNames()
                 .stream()
                 .map(this::genBean)
                 .toArray();

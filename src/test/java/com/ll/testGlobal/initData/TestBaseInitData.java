@@ -1,4 +1,4 @@
-package com.ll.framework.ioc.testGlobal.initData;
+package com.ll.testGlobal.initData;
 
 import com.ll.framework.ioc.ApplicationRunner;
 import com.ll.framework.ioc.annotations.Bean;

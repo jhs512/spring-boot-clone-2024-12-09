@@ -1,4 +1,4 @@
-package com.ll.framework.ioc.testDomain.sms.service;
+package com.ll.testDomain.sms.service;
 
 import com.ll.framework.ioc.annotations.Service;
 

@@ -1,4 +1,4 @@
-package com.ll.framework.ioc.testDomain.post.service;
+package com.ll.testDomain.post.service;
 
 import com.ll.framework.ioc.annotations.Service;
 import lombok.Getter;

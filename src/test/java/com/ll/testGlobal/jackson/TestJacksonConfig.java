@@ -1,4 +1,4 @@
-package com.ll.framework.ioc.testGlobal.jackson;
+package com.ll.testGlobal.jackson;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
