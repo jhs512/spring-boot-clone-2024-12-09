@@ -2,8 +2,10 @@ package com.ll.framework.web;
 
 import com.ll.framework.ioc.ApplicationContext;
 import com.ll.framework.web.annotations.Controller;
-import com.ll.framework.web.annotations.PathVariable;
 import com.ll.framework.web.annotations.RequestMapping;
+import com.ll.framework.web.handler.HandlerExecutor;
+import com.ll.framework.web.resolver.PathVariableHandlerMethodArgumentResolver;
+import com.ll.framework.web.utils.PathPatternParser;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -11,10 +13,14 @@ import java.util.*;
 
 public class ActionMapper {
     private final ApplicationContext applicationContext;
+    private final HandlerExecutor handlerExecutor;
     private Map<String, ActionMethodDefinition> actionMethodDefinitions;
 
     public ActionMapper(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
+        this.handlerExecutor = new HandlerExecutor(List.of(
+            new PathVariableHandlerMethodArgumentResolver()
+        ));
     }
 
     public void init() {
@@ -36,33 +42,13 @@ public class ActionMapper {
     }
 
     public Optional<ActionMethodDefinition> findActionMethodDefinitionByActionPath(String path) {
-        return this.actionMethodDefinitions
-                .entrySet()
+        return actionMethodDefinitions
+                .values()
                 .stream()
-                .filter(entry -> matchPath(entry.getKey(), path))
-                .map(Map.Entry::getValue)
+                .filter(actionMethodDefinition -> 
+                    PathPatternParser.matches(actionMethodDefinition.getPathFormat(), path)
+                )
                 .findFirst();
-    }
-
-    private boolean matchPath(String pathTemplate, String path) {
-        String[] pathTemplateParts = pathTemplate.split("/");
-        String[] pathParts = path.split("/");
-
-        if (pathTemplateParts.length != pathParts.length) {
-            return false;
-        }
-
-        for (int i = 0; i < pathTemplateParts.length; i++) {
-            if (pathTemplateParts[i].startsWith("{") && pathTemplateParts[i].endsWith("}")) {
-                continue;
-            }
-
-            if (!pathTemplateParts[i].equals(pathParts[i])) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private boolean hasRequestMappingAnnotation(Method method) {
@@ -76,51 +62,27 @@ public class ActionMapper {
         if (annotationClass == RequestMapping.class) {
             return true;
         }
-        // 메타애노테이션으로 @RequestMapping이 있는지 확인
+        // 메타 애노테이션으로 @RequestMapping이 있는지 확인
         return Arrays.stream(annotationClass.getAnnotations())
                 .anyMatch(metaAnnotation -> metaAnnotation.annotationType() == RequestMapping.class);
     }
 
-    public <T> T doAction(ActionMethodDefinition actionMethodDefinition, String path) {
+    public void doAction(ActionMethodDefinition actionMethodDefinition, HttpRequest req, HttpResponse resp) {
         String controllerBeanName = actionMethodDefinition.getControllerBeanName();
-
-        T controller = applicationContext.genBean(controllerBeanName);
+        Object controller = applicationContext.genBean(controllerBeanName);
         Method method = actionMethodDefinition.getMethod();
 
-        Object[] params = Arrays.stream(method.getParameters())
-                .map(parameter -> {
-                    // 만약에 @PathVariable이 붙어있는 파라미터라면
-                    if (parameter.isAnnotationPresent(PathVariable.class)) {
+        Map<String, String> pathVariables = 
+            PathPatternParser.extractPathVariables(actionMethodDefinition.getPathFormat(), req.getRequestURI());
 
-                        String[] pathBits = path.split("/");
-                        String[] pathFormatBits = actionMethodDefinition.getPathFormat().split("/");
-
-                        Map<String, String> pathVariables = new HashMap<>();
-                        for (int i = 0; i < pathBits.length; i++) {
-                            if (pathFormatBits[i].startsWith("{") && pathFormatBits[i].endsWith("}")) {
-                                pathVariables.put(pathFormatBits[i].substring(1, pathFormatBits[i].length() - 1), pathBits[i]);
-                            }
-                        }
-
-                        String pathVariable = pathVariables.get(parameter.getName());
-
-                        if (parameter.getType() == int.class) {
-                            return Integer.parseInt(pathVariable);
-                        }
-                        else if (parameter.getType() == long.class) {
-                            return Long.parseLong(pathVariable);
-                        }
-                        else {
-                            return pathVariable;
-                        }
-                    }
-
-                    return genBean(parameter.getType().getSimpleName());
-                })
-                .toArray();
+        req.getPathParams().putAll(pathVariables);
 
         try {
-            return (T) method.invoke(controller, params);
+            Object result = handlerExecutor.execute(method, controller, req, resp);
+            
+            if (result != null) {
+                resp.setBody(result.toString());
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

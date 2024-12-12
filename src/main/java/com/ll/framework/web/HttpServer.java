@@ -88,6 +88,6 @@ public class HttpServer {
 
     private static void handleRequest(HttpRequest request, HttpResponse response) {
         // 매칭되는 핸들러를 찾지 못한 경우
-        response.setStatus(404);
+        response.setStatus(HttpStatus.NOT_FOUND);
     }
 }

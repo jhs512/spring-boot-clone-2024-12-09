@@ -23,20 +23,19 @@ public class HttpResponse {
         setHeader("Content-Type", "text/html");
     }
 
-    public void setStatus(int status) {
-        this.status = status;
-        this.statusMessage = switch (status) {
-            case 200 -> "OK";
-            case 404 -> "Not Found";
-            case 500 -> "Internal Server Error";
-            default -> "Unknown";
-        };
+    public void setStatus(HttpStatus status) {
+        this.status = status.getCode();
+        this.statusMessage = status.getMessage();
     }
 
-    public void setJsonBody(Object obj) throws JsonProcessingException {
-        setHeader("Content-Type", "application/json");
-        String jsonBody = objectMapper.writeValueAsString(obj);
-        setBody(jsonBody);
+    public void setJsonBody(Object obj) {
+        try {
+            setHeader("Content-Type", "application/json");
+            String jsonBody = objectMapper.writeValueAsString(obj);
+            setBody(jsonBody);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("JSON 직렬화 실패", e);
+        }
     }
 
     public void setHeader(String name, String value) {

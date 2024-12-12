@@ -1,16 +1,20 @@
 package com.ll.framework.web;
 
-import com.ll.framework.ioc.ApplicationContext;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
+import com.ll.framework.ioc.ApplicationContext;
+
+@DisplayName("ActionMapper 테스트")
 public class ActionMapperTest {
     private static ActionMapper actionMapper;
+    private static HttpRequest request;
+    private static HttpResponse response;
 
     @BeforeAll
     public static void beforeAll() {
@@ -21,73 +25,87 @@ public class ActionMapperTest {
         actionMapper.init();
     }
 
-    @Test
-    @DisplayName("ActionMapper 객체 생성")
-    public void t1() {
-        System.out.println(actionMapper);
+    @BeforeEach
+    public void setUp() {
+        request = new HttpRequest();
+        response = new HttpResponse();
     }
 
     @Test
-    @DisplayName("actionMapper.findActionMethodDefinition(\"/testSmsLogs\")")
-    public void t2() {
-        Optional<ActionMethodDefinition> opActionMethodDefinition = actionMapper.findActionMethodDefinition("/testSmsLogs");
+    @DisplayName("GET /testSmsLogs 요청 처리")
+    public void handleGetSmsLogs() {
+        // given
+        request.setMethod("GET");
+        request.setRequestURI("/testSmsLogs");
 
+        // when
+        Optional<ActionMethodDefinition> opActionMethodDefinition =
+                actionMapper.findActionMethodDefinitionByActionPath(request.getRequestURI());
+
+        // then
         assertThat(opActionMethodDefinition).isPresent();
+
+        // when
+        actionMapper.doAction(opActionMethodDefinition.get(), request, response);
+
+        // then
+        assertThat(response.getBody().toString()).isEqualTo("getItems");
     }
 
     @Test
-    @DisplayName("Optional<ActionMethodDefinition> opActionMethodDefinition = actionMapper.findActionMethodDefinitionByActionPath(\"/testSmsLogs\");")
-    public void t3() {
-        Optional<ActionMethodDefinition> opActionMethodDefinition = actionMapper.findActionMethodDefinitionByActionPath("/testSmsLogs");
+    @DisplayName("GET /testSmsLogs/{id} 요청 처리")
+    public void handleGetSmsLogById() {
+        // given
+        request.setMethod("GET");
+        request.setRequestURI("/testSmsLogs/1");
 
+        // when
+        Optional<ActionMethodDefinition> opActionMethodDefinition =
+                actionMapper.findActionMethodDefinitionByActionPath(request.getRequestURI());
+
+        // then
         assertThat(opActionMethodDefinition).isPresent();
+
+        // when
+        actionMapper.doAction(opActionMethodDefinition.get(), request, response);
+
+        // then
+        assertThat(response.getBody().toString()).isEqualTo("getItem 1");
     }
 
     @Test
-    @DisplayName("")
-    public void t4() {
-        Optional<ActionMethodDefinition> opActionMethodDefinition = actionMapper.findActionMethodDefinitionByActionPath("/testSmsLogs");
+    @DisplayName("GET /testSmsLogs/{groupCode}/{id} 요청 처리")
+    public void handleGetSmsLogByGroupAndId() {
+        // given
+        request.setMethod("GET");
+        request.setRequestURI("/testSmsLogs/emergency/11");
 
-        ActionMethodDefinition actionMethodDefinition = opActionMethodDefinition.get();
+        // when
+        Optional<ActionMethodDefinition> opActionMethodDefinition =
+                actionMapper.findActionMethodDefinitionByActionPath(request.getRequestURI());
 
-        String rs = actionMapper.doAction(actionMethodDefinition, "/testSmsLogs");
+        // then
+        assertThat(opActionMethodDefinition).isPresent();
 
-        assertThat(rs).isEqualTo("getItems");
+        // when
+        actionMapper.doAction(opActionMethodDefinition.get(), request, response);
+
+        // then
+        assertThat(response.getBody().toString()).isEqualTo("group : emergency, getItem 11");
     }
 
     @Test
-    @DisplayName("")
-    public void t5() {
-        Optional<ActionMethodDefinition> opActionMethodDefinition = actionMapper.findActionMethodDefinitionByActionPath("/testSmsLogs/1");
+    @DisplayName("존재하지 않는 경로 요청 처리")
+    public void handleNonExistentPath() {
+        // given
+        request.setMethod("GET");
+        request.setRequestURI("/non-existent");
 
-        ActionMethodDefinition actionMethodDefinition = opActionMethodDefinition.get();
+        // when
+        Optional<ActionMethodDefinition> opActionMethodDefinition =
+                actionMapper.findActionMethodDefinitionByActionPath(request.getRequestURI());
 
-        String rs = actionMapper.doAction(actionMethodDefinition, "/testSmsLogs/1");
-
-        assertThat(rs).isEqualTo("getItem 1");
-    }
-
-    @Test
-    @DisplayName("")
-    public void t6() {
-        Optional<ActionMethodDefinition> opActionMethodDefinition = actionMapper.findActionMethodDefinitionByActionPath("/testSmsLogs/1");
-
-        ActionMethodDefinition actionMethodDefinition = opActionMethodDefinition.get();
-
-        String rs = actionMapper.doAction(actionMethodDefinition, "/testSmsLogs/6");
-
-        assertThat(rs).isEqualTo("getItem 6");
-    }
-
-    @Test
-    @DisplayName("")
-    public void t7() {
-        Optional<ActionMethodDefinition> opActionMethodDefinition = actionMapper.findActionMethodDefinitionByActionPath("/testSmsLogs/emergency/1");
-
-        ActionMethodDefinition actionMethodDefinition = opActionMethodDefinition.get();
-
-        String rs = actionMapper.doAction(actionMethodDefinition, "/testSmsLogs/emergency/11");
-
-        assertThat(rs).isEqualTo("group : emergency, getItem 11");
+        // then
+        assertThat(opActionMethodDefinition).isEmpty();
     }
 }
